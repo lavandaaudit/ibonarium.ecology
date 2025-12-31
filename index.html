@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ibonarium Real-Time (Proxy)</title>
+<title>Ibonarium Real-Time</title>
 <style>
 body { margin:0; font-family:"Courier New", monospace; background:#0a0a0a; color:#9fe7ff; display:flex; flex-direction:column; align-items:center; padding:20px; }
 h1 { text-align:center; margin-bottom:20px; }
@@ -19,20 +19,18 @@ h1 { text-align:center; margin-bottom:20px; }
 <div id="systemStatus">Завантаження даних...</div>
 
 <script>
-// Безкоштовний проксі
-const proxy = "https://api.allorigins.win/get?url=";
+const serverBase = "https://YOUR_SERVER_URL"; // <- сюди встав свій Render/Railway URL
 
-// Показники для реального ріалтайму
 const indicators = [
-  {id:'pm25', label:'PM2.5', api:'https://api.openaq.org/v2/latest?parameter=pm25&limit=100', value:0, thresholds:[35,55]},
-  {id:'pm10', label:'PM10', api:'https://api.openaq.org/v2/latest?parameter=pm10&limit=100', value:0, thresholds:[50,100]},
-  {id:'no2', label:'NO2', api:'https://api.openaq.org/v2/latest?parameter=no2&limit=100', value:0, thresholds:[40,80]},
-  {id:'o3', label:'O3', api:'https://api.openaq.org/v2/latest?parameter=o3&limit=100', value:0, thresholds:[60,120]},
-  {id:'quakes', label:'Землетруси >M4 (за годину)', api:'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.0_hour.geojson', value:0, thresholds:[2,5]}
+  {id:'pm25', label:'PM2.5', value:0, thresholds:[35,55]},
+  {id:'pm10', label:'PM10', value:0, thresholds:[50,100]},
+  {id:'no2', label:'NO2', value:0, thresholds:[40,80]},
+  {id:'o3', label:'O3', value:0, thresholds:[60,120]},
+  {id:'quakes', label:'Землетруси >M4 (за годину)', value:0, thresholds:[2,5]}
 ];
 
-// Створюємо карточки
 const heatmap = document.getElementById('heatmap');
+
 function createCards() {
   indicators.forEach(ind=>{
     const div = document.createElement('div');
@@ -43,42 +41,35 @@ function createCards() {
   });
 }
 
-// Оновлюємо карточку кольором та значенням
-function updateCard(indicator) {
-  const el = document.getElementById(indicator.id);
+function updateCard(ind) {
+  const el = document.getElementById(ind.id);
   const valEl = el.querySelector('.value');
-  valEl.textContent = indicator.value;
-  if(typeof indicator.value==='number'){
-    if(indicator.value < indicator.thresholds[0]) el.style.backgroundColor='#4dd2ff'; // зелений
-    else if(indicator.value < indicator.thresholds[1]) el.style.backgroundColor='#ffcc00'; // жовтий
-    else el.style.backgroundColor='#ff4d4d'; // червоний
-  } else el.style.backgroundColor='#666'; // якщо N/A
+  valEl.textContent = ind.value;
+  if(typeof ind.value==='number'){
+    if(ind.value < ind.thresholds[0]) el.style.backgroundColor='#4dd2ff';
+    else if(ind.value < ind.thresholds[1]) el.style.backgroundColor='#ffcc00';
+    else el.style.backgroundColor='#ff4d4d';
+  } else el.style.backgroundColor='#666';
 }
 
-// Фетчимо дані через проксі
 async function fetchData() {
-  for(const ind of indicators){
-    try{
-      const url = proxy + encodeURIComponent(ind.api);
-      const res = await fetch(url);
-      const text = await res.json();
-      let data;
-      if(ind.api.includes('openaq')) data = JSON.parse(text.contents);
-      else data = JSON.parse(text.contents);
+  try{
+    // Повітря
+    const air = await fetch(`${serverBase}/api/air`).then(r=>r.json());
+    indicators[0].value = Math.round(air.pm25.results.reduce((a,b)=>a+b.measurements[0].value,0)/air.pm25.results.length);
+    indicators[1].value = Math.round(air.pm10.results.reduce((a,b)=>a+b.measurements[0].value,0)/air.pm10.results.length);
+    indicators[2].value = Math.round(air.no2.results.reduce((a,b)=>a+b.measurements[0].value,0)/air.no2.results.length);
+    indicators[3].value = Math.round(air.o3.results.reduce((a,b)=>a+b.measurements[0].value,0)/air.o3.results.length);
 
-      if(ind.api.includes('openaq')){
-        const values = data.results.map(r=>r.measurements[0]?.value||0);
-        ind.value = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
-      } else if(ind.id==='quakes'){
-        ind.value = data.features.length;
-      }
-      updateCard(ind);
-    } catch(e){ console.error('Помилка fetch',ind.id,e); ind.value='N/A'; updateCard(ind);}
-  }
-  updateSystemStatus();
+    // Землетруси
+    const quakes = await fetch(`${serverBase}/api/quakes`).then(r=>r.json());
+    indicators[4].value = quakes.features.length;
+
+    indicators.forEach(updateCard);
+    updateSystemStatus();
+  } catch(e){ console.error(e); }
 }
 
-// Оцінка загального стану системи
 function updateSystemStatus(){
   let numericValues = indicators.filter(i=>typeof i.value==='number').map(i=>i.value);
   if(numericValues.length===0) {document.getElementById('systemStatus').textContent='Немає даних ❌'; return;}
@@ -91,7 +82,7 @@ function updateSystemStatus(){
 
 createCards();
 fetchData();
-setInterval(fetchData,300000); // кожні 5 хв
+setInterval(fetchData,300000);
 </script>
 </body>
 </html>
