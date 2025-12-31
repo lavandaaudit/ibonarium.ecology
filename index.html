@@ -1,110 +1,167 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Планетарний екологічний OSINT</title>
+<meta charset="utf-8">
+<title>Planetary ECO-OSINT</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet"/>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#000;color:#9fe7ff;font-family:"Courier New",monospace}
-canvas{position:fixed;inset:0;z-index:0}
-.wrapper{position:relative;z-index:2;padding:16px;display:flex;flex-direction:column;gap:16px}
-.title{color:#4dd2ff;letter-spacing:2px;font-size:18px}
-.panel{border:1px solid #4dd2ff;padding:12px;background:rgba(0,0,0,.75)}
-.row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
-.bar{width:60%;height:6px;border:1px solid #4dd2ff}
-.fill{height:100%;background:#4dd2ff;transition:width 1s}
-.alert{color:#ff4d4d;animation:blink 1s infinite}
-@keyframes blink{50%{opacity:.4}}
-#map{height:360px;border:1px solid #4dd2ff;margin-top:10px}
-.footer{font-size:10px;opacity:.4;text-align:center}
+html, body, #cesiumContainer {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: black;
+    overflow: hidden;
+    font-family: system-ui, sans-serif;
+}
+
+#panel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.7);
+    color: #eee;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+#panel label {
+    display: block;
+    margin: 6px 0;
+    cursor: pointer;
+}
 </style>
 </head>
 
 <body>
+<div id="cesiumContainer"></div>
 
-<canvas id="bg"></canvas>
-
-<div class="wrapper">
-  <div class="title">ПЛАНЕТАРНИЙ ЕКОЛОГІЧНИЙ OSINT</div>
-
-  <div class="panel">
-    <div class="row">ПОЖЕЖІ<div class="bar"><div id="fire" class="fill"></div></div></div>
-    <div class="row">ПОВЕНІ<div class="bar"><div id="flood" class="fill"></div></div></div>
-    <div class="row">ШТОРМИ<div class="bar"><div id="storm" class="fill"></div></div></div>
-    <div class="row">БІОСФЕРА<div class="bar"><div id="bio" class="fill"></div></div></div>
-    <div class="row alert" id="anomaly">ПОЛЕ АНОМАЛІЙ: АНАЛІЗ…</div>
-
-    <div id="map"></div>
-  </div>
-
-  <div class="footer">ibonarium.ecology · OSINT без фальші</div>
+<div id="panel">
+<strong>ECO-OSINT Layers</strong>
+<label><input type="checkbox" id="heat"> Аномалії тепла</label>
+<label><input type="checkbox" id="floods"> Повені</label>
+<label><input type="checkbox" id="cyclones"> Циклони / шторми</label>
+<label><input type="checkbox" id="quakes"> Землетруси</label>
+<label><input type="checkbox" id="volcanoes"> Вулкани</label>
+<label><input type="checkbox" id="air"> Забруднення повітря</label>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-/* ===== BACKGROUND ===== */
-const c=document.getElementById("bg"),x=c.getContext("2d");
-let W,H,P=[];
-function resize(){
-  W=c.width=innerWidth;H=c.height=innerHeight;
-  P=Array.from({length:200},()=>({x:Math.random()*W,y:Math.random()*H,z:Math.random()*W}));
+Cesium.Ion.defaultAccessToken = null;
+
+const viewer = new Cesium.Viewer("cesiumContainer", {
+    baseLayerPicker: false,
+    geocoder: false,
+    animation: false,
+    timeline: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    fullscreenButton: false
+});
+
+viewer.scene.globe.enableLighting = true;
+
+// ---------- HEAT ANOMALIES (NASA GIBS) ----------
+const heatLayer = viewer.imageryLayers.addImageryProvider(
+    new Cesium.WebMapTileServiceImageryProvider({
+        url: "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi",
+        layer: "MODIS_Terra_Land_Surface_Temp_Day",
+        style: "",
+        tileMatrixSetID: "2km",
+        format: "image/png",
+        maximumLevel: 6
+    })
+);
+heatLayer.show = false;
+
+// ---------- FLOODS (GDACS) ----------
+const floodsLayer = viewer.imageryLayers.addImageryProvider(
+    new Cesium.WebMapServiceImageryProvider({
+        url: "https://www.gdacs.org/gdacsapi/api/WMS",
+        layers: "Floods",
+        parameters: { transparent: true, format: "image/png" }
+    })
+);
+floodsLayer.show = false;
+
+// ---------- CYCLONES ----------
+const cycloneLayer = viewer.imageryLayers.addImageryProvider(
+    new Cesium.WebMapServiceImageryProvider({
+        url: "https://www.gdacs.org/gdacsapi/api/WMS",
+        layers: "Cyclones",
+        parameters: { transparent: true, format: "image/png" }
+    })
+);
+cycloneLayer.show = false;
+
+// ---------- AIR POLLUTION (CAMS aerosol) ----------
+const airLayer = viewer.imageryLayers.addImageryProvider(
+    new Cesium.WebMapTileServiceImageryProvider({
+        url: "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi",
+        layer: "MODIS_Terra_Aerosol",
+        style: "",
+        tileMatrixSetID: "2km",
+        format: "image/png",
+        maximumLevel: 6
+    })
+);
+airLayer.show = false;
+
+// ---------- EARTHQUAKES (USGS live) ----------
+let quakeSource;
+async function loadEarthquakes() {
+    quakeSource = await Cesium.GeoJsonDataSource.load(
+        "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+        { clampToGround: false }
+    );
+    viewer.dataSources.add(quakeSource);
+
+    quakeSource.entities.values.forEach(e => {
+        const mag = e.properties.mag;
+        e.point = new Cesium.PointGraphics({
+            pixelSize: 4 + mag * 2,
+            color: Cesium.Color.VIOLET.withAlpha(0.7)
+        });
+    });
 }
-resize();addEventListener("resize",resize);
-(function draw(){
-  x.fillStyle="#000";x.fillRect(0,0,W,H);
-  P.forEach(p=>{
-    p.z-=0.2;if(p.z<1)p.z=W;
-    let k=120/p.z;
-    let px=(p.x-W/2)*k+W/2;
-    let py=(p.y-H/2)*k+H/2;
-    if(px>0&&py>0&&px<W&&py<H)x.fillRect(px,py,2,2);
-  });
-  requestAnimationFrame(draw);
-})();
+loadEarthquakes();
 
-/* ===== MAP ===== */
-const map=L.map("map",{zoomControl:false}).setView([20,0],2);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png").addTo(map);
+// ---------- VOLCANOES ----------
+let volcanoSource;
+async function loadVolcanoes() {
+    volcanoSource = await Cesium.GeoJsonDataSource.load(
+        "https://raw.githubusercontent.com/andrewcottam/volcanoes/master/volcanoes.geojson"
+    );
+    viewer.dataSources.add(volcanoSource);
 
-/* 🔥 FIRE — NASA FIRMS */
-const fireLayer=L.tileLayer(
-  "https://firms.modaps.eosdis.nasa.gov/mapserver/wms/fires/viirs_snpp_24h?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=fires&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256",
-  {opacity:.7}
-).addTo(map);
-
-/* 🌊 FLOOD — GDACS */
-const floodLayer=L.tileLayer.wms(
-  "https://www.gdacs.org/gdacsapi/api/polygons/getmap",
-  {layers:"FL",transparent:true,opacity:.6}
-).addTo(map);
-
-/* ===== GDACS EVENTS (REAL DATA) ===== */
-async function updateEvents(){
-  const res=await fetch("https://www.gdacs.org/xml/rss.xml");
-  const text=await res.text();
-  const fires=(text.match(/Fire/g)||[]).length;
-  const floods=(text.match(/Flood/g)||[]).length;
-  const storms=(text.match(/Cyclone|Storm/g)||[]).length;
-
-  fire.style.width=Math.min(fires*10,100)+"%";
-  flood.style.width=Math.min(floods*15,100)+"%";
-  storm.style.width=Math.min(storms*20,100)+"%";
-
-  const score=fires+floods+storms;
-  anomaly.textContent=
-    score>12?"ПОЛЕ АНОМАЛІЙ: КРИТИЧНЕ":
-    score>6 ?"ПОЛЕ АНОМАЛІЙ: АКТИВНЕ":
-             "ПОЛЕ АНОМАЛІЙ: СТАБІЛЬНЕ";
+    volcanoSource.entities.values.forEach(v => {
+        v.billboard = {
+            image: "https://upload.wikimedia.org/wikipedia/commons/e/e7/Volcano_icon.svg",
+            scale: 0.05
+        };
+    });
 }
+loadVolcanoes();
 
-updateEvents();
-setInterval(updateEvents,300000);
+// ---------- UI ----------
+document.getElementById("heat").onchange = e => heatLayer.show = e.target.checked;
+document.getElementById("floods").onchange = e => floodsLayer.show = e.target.checked;
+document.getElementById("cyclones").onchange = e => cycloneLayer.show = e.target.checked;
+document.getElementById("air").onchange = e => airLayer.show = e.target.checked;
+
+document.getElementById("quakes").onchange = e =>
+    quakeSource && (quakeSource.show = e.target.checked);
+
+document.getElementById("volcanoes").onchange = e =>
+    volcanoSource && (volcanoSource.show = e.target.checked);
+
+// стартовий вигляд
+viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(20, 40, 20000000)
+});
 </script>
-
 </body>
 </html>
