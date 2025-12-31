@@ -1,81 +1,80 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<meta charset="utf-8">
-<title>Planetary Air Pollution</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Екологічна карта забруднення повітря</title>
 
-<script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
-<link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet"/>
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Leaflet Heatmap -->
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
 <style>
-html, body, #cesiumContainer {
-    width: 100%;
+html, body, #map {
     height: 100%;
     margin: 0;
-    background: black;
-    overflow: hidden;
+    font-family: sans-serif;
 }
 #panel {
     position: absolute;
     top: 10px;
     left: 10px;
+    z-index: 1000;
     background: rgba(0,0,0,0.6);
-    color: #eee;
+    color: #fff;
     padding: 10px;
     border-radius: 6px;
     font-size: 14px;
 }
 </style>
 </head>
-
 <body>
-<div id="cesiumContainer"></div>
+<div id="map"></div>
 <div id="panel">
-<label><input type="checkbox" id="air"> Забруднення повітря (Aerosol)</label>
+<strong>Забруднення повітря (PM2.5)</strong><br>
+Оновлюється кожну хвилину
 </div>
 
 <script>
-Cesium.Ion.defaultAccessToken = null;
+// ==================== Карта ====================
+const map = L.map('map').setView([20, 0], 2);
 
-// =================== VIEWER ===================
-const viewer = new Cesium.Viewer("cesiumContainer", {
-    baseLayerPicker: false,
-    geocoder: false,
-    animation: false,
-    timeline: false,
-    sceneModePicker: false,
-    navigationHelpButton: false,
-    fullscreenButton: false
-});
+// OpenStreetMap
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
 
-// =================== BASE EARTH ===================
-viewer.imageryLayers.addImageryProvider(
-    new Cesium.TileMapServiceImageryProvider({
-        url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
-    })
-);
-viewer.scene.globe.enableLighting = true;
+// ==================== Heatmap ====================
+let heatLayer = L.heatLayer([], {radius: 25, blur: 15, maxZoom: 6}).addTo(map);
 
-// =================== AIR POLLUTION LAYER ===================
-const airLayer = viewer.imageryLayers.addImageryProvider(
-    new Cesium.WebMapTileServiceImageryProvider({
-        url: "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi",
-        layer: "MODIS_Terra_Aerosol",
-        style: "",
-        tileMatrixSetID: "2km",
-        format: "image/png",
-        maximumLevel: 6
-    })
-);
-airLayer.show = false;
+// ==================== Дані OpenAQ ====================
+async function fetchAirData() {
+    try {
+        const res = await fetch('https://api.openaq.org/v2/latest?parameter=pm25&limit=1000');
+        const data = await res.json();
 
-// =================== UI ===================
-document.getElementById("air").onchange = e => airLayer.show = e.target.checked;
+        const heatPoints = data.results
+            .filter(d => d.measurements && d.measurements.length > 0)
+            .map(d => {
+                const value = d.measurements[0].value;
+                const lat = d.coordinates.latitude;
+                const lon = d.coordinates.longitude;
+                // нормалізація значення PM2.5 для heatmap
+                return [lat, lon, value];
+            });
 
-// =================== CAMERA ===================
-viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(20, 40, 20000000)
-});
+        heatLayer.setLatLngs(heatPoints);
+    } catch(e) {
+        console.error('Помилка завантаження даних OpenAQ', e);
+    }
+}
+
+// ==================== Ріалтайм оновлення ====================
+fetchAirData();
+setInterval(fetchAirData, 60000); // кожну хвилину
 </script>
 </body>
 </html>
