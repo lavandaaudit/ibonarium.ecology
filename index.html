@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ibonarium Real-Time</title>
+<title>Ibonarium Real-Time (Proxy)</title>
 <style>
 body { margin:0; font-family:"Courier New", monospace; background:#0a0a0a; color:#9fe7ff; display:flex; flex-direction:column; align-items:center; padding:20px; }
 h1 { text-align:center; margin-bottom:20px; }
@@ -19,6 +19,9 @@ h1 { text-align:center; margin-bottom:20px; }
 <div id="systemStatus">Завантаження даних...</div>
 
 <script>
+// Безкоштовний проксі
+const proxy = "https://api.allorigins.win/get?url=";
+
 // Показники для реального ріалтайму
 const indicators = [
   {id:'pm25', label:'PM2.5', api:'https://api.openaq.org/v2/latest?parameter=pm25&limit=100', value:0, thresholds:[35,55]},
@@ -52,18 +55,21 @@ function updateCard(indicator) {
   } else el.style.backgroundColor='#666'; // якщо N/A
 }
 
-// Фетчимо дані
+// Фетчимо дані через проксі
 async function fetchData() {
   for(const ind of indicators){
     try{
+      const url = proxy + encodeURIComponent(ind.api);
+      const res = await fetch(url);
+      const text = await res.json();
+      let data;
+      if(ind.api.includes('openaq')) data = JSON.parse(text.contents);
+      else data = JSON.parse(text.contents);
+
       if(ind.api.includes('openaq')){
-        const res = await fetch(ind.api);
-        const data = await res.json();
         const values = data.results.map(r=>r.measurements[0]?.value||0);
         ind.value = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
       } else if(ind.id==='quakes'){
-        const res = await fetch(ind.api);
-        const data = await res.json();
         ind.value = data.features.length;
       }
       updateCard(ind);
