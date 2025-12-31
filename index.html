@@ -2,422 +2,197 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="referrer" content="no-referrer">
-<meta name="robots" content="noindex,nofollow">
-<title>ibonarium.ecology : planetary pulse</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLANETARY ECO OSINT</title>
+
 <style>
-/* ================= RESET ================= */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{
+  width:100%;
+  height:100%;
+  background:#000;
+  color:#9fe7ff;
+  font-family:"Courier New",monospace;
+  overflow:hidden
 }
-html, body {
-  width: 100%;
-  height: 100%;
-  background: #000;
-  color: #9fe7ff;
-  font-family: "Courier New", monospace;
-  overflow: hidden;
+canvas{
+  position:fixed;
+  inset:0;
+  z-index:0
 }
-/* ================= BACKGROUND ================= */
-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
+.wrapper{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:24px;
+  padding:20px;
+  text-align:center
 }
-/* ================= LAYOUT ================= */
-.wrapper {
-  position: relative;
-  z-index: 2;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 28px;
-  text-align: center;
-  padding: 20px;
+.title{
+  font-size:18px;
+  letter-spacing:2px;
+  color:#4dd2ff
 }
-/* ================= PLAYER ================= */
-.player {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
+.subtitle{
+  font-size:12px;
+  opacity:.6;
+  letter-spacing:3px
 }
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 18px;
+.panel{
+  width:90%;
+  max-width:900px;
+  background:rgba(0,0,0,.75);
+  border:1px solid #4dd2ff;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:14px
 }
-button {
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  border: 1px solid #4dd2ff;
-  background: transparent;
-  color: #4dd2ff;
-  font-size: 26px;
-  cursor: pointer;
-  transition: .3s;
+.row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:13px
 }
-button:hover {
-  background: rgba(77,210,255,.15);
-  box-shadow: 0 0 22px rgba(77,210,255,.6);
+.bar{
+  width:60%;
+  height:6px;
+  background:#111;
+  border:1px solid #4dd2ff;
+  position:relative
 }
-/* ================= VOLUME ================= */
-.volume {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+.fill{
+  height:100%;
+  background:#4dd2ff;
+  transition:width 1s
 }
-.volume label {
-  font-size: 10px;
-  opacity: 0.6;
+.alert{
+  color:#ff4d4d;
+  animation:blink 1s infinite
 }
-input[type="range"] {
-  -webkit-appearance: none;
-  width: 120px;
-  height: 2px;
-  background: #4dd2ff;
-  outline: none;
-  opacity: 0.7;
-}
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #4dd2ff;
-  cursor: pointer;
-}
-/* ================= TEXT ================= */
-.text-block {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 6px;
-}
-.main-text {
-  font-size: 16px;
-  letter-spacing: 1.2px;
-}
-.sub-text {
-  font-size: 13px;
-  letter-spacing: 2px;
-  opacity: 0.9;
-}
-.footer-text {
-  font-size: 10px;
-  letter-spacing: 1px;
-  opacity: 0.45;
-}
-/* ================= LINKS ================= */
-.links {
-  display: flex;
-  align-items: center;
-  gap: 32px; /* відступ між посиланнями в рядку */
-  margin-top: 20px;
-}
-.link {
-  font-size: 13px;
-  letter-spacing: 1.5px;
-  opacity: 0.7;
-}
-.link a {
-  color: #4dd2ff;
-  text-decoration: none;
-  border-bottom: 1px dotted #4dd2ff;
-  transition: 0.3s;
-}
-.link a:hover {
-  opacity: 0.8;
-  border-bottom: 1px solid #4dd2ff;
-}
-/* ================= DASHBOARD ================= */
-.dashboard {
-  width: 80%;
-  max-width: 1200px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  background: rgba(0,0,0,0.8);
-  padding: 20px;
-  border: 1px solid #4dd2ff;
-  border-radius: 10px;
-  overflow-y: auto;
-  max-height: 60vh;
-}
-.layer {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-bottom: 1px dotted #4dd2ff;
-  padding-bottom: 10px;
-}
-.layer-title {
-  font-size: 14px;
-  color: #4dd2ff;
-}
-.data-point {
-  font-size: 12px;
-  opacity: 0.8;
-}
-.map-container {
-  height: 200px;
-  background: #111;
-  position: relative;
-}
-#map {
-  height: 100%;
-  width: 100%;
-}
-/* ================= ALERTS ================= */
-.alert {
-  color: #ff4d4d;
-  font-size: 12px;
-  animation: blink 1s infinite;
-}
-@keyframes blink {
-  50% { opacity: 0.5; }
-}
-/* ================= MOBILE ================= */
-@media (max-width: 600px) {
-  button {
-    width: 68px;
-    height: 68px;
-    font-size: 24px;
-  }
-  .main-text {
-    font-size: 14px;
-  }
-  .sub-text {
-    font-size: 12px;
-  }
-  .links {
-    gap: 24px; /* трохи менше на мобілках */
-  }
-  .dashboard {
-    width: 95%;
-  }
+@keyframes blink{50%{opacity:.4}}
+.footer{
+  font-size:10px;
+  opacity:.4;
+  margin-top:10px
 }
 </style>
 </head>
+
 <body>
-<canvas id="eco-bg"></canvas>
+
+<canvas id="field"></canvas>
+
 <div class="wrapper">
-  <div class="player">
-    <div class="controls">
-      <button id="play">▶</button>
-      <div class="volume">
-        <label>volume</label>
-        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.7">
-      </div>
+  <div class="title">PLANETARY ECOLOGICAL OSINT</div>
+  <div class="subtitle">REALITY PRESSURE SENSOR</div>
+
+  <div class="panel" id="panel">
+
+    <div class="row">
+      ATMOSPHERE
+      <div class="bar"><div class="fill" id="air"></div></div>
     </div>
-    <div class="text-block">
-      <div class="main-text">
-        ibonarium.ecology: planetary pulse.не для всіх.
-      </div>
-      <div class="sub-text">
-        LIVE MONITORING 24'7
-      </div>
-      <div class="footer-text">
-        ibonarium project 2026 by Roman Katyuschenko
-      </div>
+
+    <div class="row">
+      WATER
+      <div class="bar"><div class="fill" id="water"></div></div>
     </div>
+
+    <div class="row">
+      FIRE
+      <div class="bar"><div class="fill" id="fire"></div></div>
+    </div>
+
+    <div class="row">
+      BIOSPHERE
+      <div class="bar"><div class="fill" id="bio"></div></div>
+    </div>
+
+    <div class="row">
+      LAND
+      <div class="bar"><div class="fill" id="land"></div></div>
+    </div>
+
+    <div class="row alert" id="anomaly">
+      ANOMALY FIELD: STABLE
+    </div>
+
   </div>
-  <!-- Дашборд для екологічних даних -->
-  <div class="dashboard" id="eco-dashboard">
-    <div class="layer" id="air-quality">
-      <div class="layer-title">AIR.QUALITY RADAR</div>
-      <div class="data-point">AQI: <span id="aqi-value">Loading...</span></div>
-      <div class="data-point">PM2.5: <span id="pm25-value">Loading...</span> µg/m³</div>
-      <div class="alert" id="air-alert" style="display:none;">HIGH POLLUTION ALERT!</div>
-    </div>
-    <div class="layer" id="carbon-footprint">
-      <div class="layer-title">CARBON.FOOTPRINT SCAN</div>
-      <div class="data-point">Global CO2: <span id="co2-value">Loading...</span> ppm</div>
-      <div class="data-point">Methane: <span id="methane-value">Loading...</span> ppb</div>
-      <div class="alert" id="carbon-alert" style="display:none;">EMISSION SPIKE DETECTED!</div>
-    </div>
-    <div class="layer" id="water-monitor">
-      <div class="layer-title">WATER.MONITOR</div>
-      <div class="data-point">Water Quality Index: <span id="wqi-value">Loading...</span></div>
-      <div class="data-point">Ocean Temperature: <span id="ocean-temp">Loading...</span> °C</div>
-      <div class="alert" id="water-alert" style="display:none;">POLLUTION EVENT!</div>
-    </div>
-    <div class="layer" id="biodiversity-track">
-      <div class="layer-title">BIODIVERSITY.TRACK</div>
-      <div class="data-point">Endangered Species Alerts: <span id="species-alerts">Loading...</span></div>
-      <div class="data-point">Migration Patterns: <span id="migration-data">Loading...</span></div>
-      <div class="alert" id="bio-alert" style="display:none;">HABITAT LOSS ALERT!</div>
-    </div>
-    <div class="layer" id="deforestation-alert">
-      <div class="layer-title">DEFORESTATION.ALERT</div>
-      <div class="data-point">Daily Loss: <span id="deforest-loss">Loading...</span> ha</div>
-      <div class="data-point">Wildfires: <span id="fire-alerts">Loading...</span> active</div>
-      <div class="alert" id="deforest-alert" style="display:none;">MAJOR DEFORESTATION EVENT!</div>
-    </div>
-    <div class="layer" id="climate-pulse">
-      <div class="layer-title">CLIMATE.PULSE</div>
-      <div class="data-point">Global Temp Anomaly: <span id="temp-anomaly">Loading...</span> °C</div>
-      <div class="data-point">CO2 Trend: <span id="co2-trend">Loading...</span></div>
-      <div class="alert" id="climate-alert" style="display:none;">CLIMATE THRESHOLD BREACHED!</div>
-      <div class="map-container">
-        <div id="map"></div> <!-- Інтеграція мапи з Leaflet -->
-      </div>
-    </div>
-  </div>
-  <!-- Посилання назад до інших модулів -->
-  <div class="links">
-    <div class="link">
-      <a href="https://lavandaaudit.github.io/sun-ibonarium-cosmo-dynamics-lab-live/" target="_blank" rel="noopener">
-        sun.ibonarium
-      </a>
-    </div>
-    <div class="link">
-      <a href="https://lavandaaudit.github.io/ibonarium.planet.radar/" target="_blank" rel="noopener">
-        planet.radar
-      </a>
-    </div>
-    <div class="link">
-      <a href="https://lavandaaudit.github.io/cosmo.dynamics/" target="_blank" rel="noopener">
-        moon.ibonarium
-      </a>
-    </div>
+
+  <div class="footer">
+    ibonarium.ecology — planetary module sealed
   </div>
 </div>
-<audio id="audio" crossorigin="anonymous" preload="none">
-  <source src="https://ice1.somafm.com/defcon-128-mp3"> <!-- Ambient екологічна музика, наприклад Defcon від SomaFM -->
-</audio>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
 <script>
-/* ================= OFF-GRID ================= */
-delete navigator.sendBeacon;
-if (navigator.connection) navigator.connection.saveData = true;
-/* ================= AUDIO ================= */
-const audio = document.getElementById("audio");
-const playBtn = document.getElementById("play");
-const volume = document.getElementById("volume");
-let playing = false;
-volume.oninput = () => {
-  audio.volume = volume.value;
-};
-playBtn.onclick = () => {
-  if (!playing) {
-    audio.volume = volume.value;
-    audio.play();
-    playBtn.textContent = "■";
-    playing = true;
-    fullscreen();
-  } else {
-    audio.pause();
-    playBtn.textContent = "▶";
-    playing = false;
-  }
-};
-/* ================= FULLSCREEN ================= */
-function fullscreen() {
-  const el = document.documentElement;
-  if (el.requestFullscreen) el.requestFullscreen().catch(()=>{});
-}
-/* ================= ECO BACKGROUND ================= */
-const s = document.getElementById("eco-bg");
-const ctx = s.getContext("2d");
-let W, H, particles = [];
-function resize() {
-  W = s.width = innerWidth;
-  H = s.height = innerHeight;
-  particles = Array.from({length: 200}, () => ({
-    x: Math.random() * W,
-    y: Math.random() * H,
-    z: Math.random() * W,
-    color: `hsl(${Math.random()*60 + 120}, 100%, 50%)` // Зелені тони для екології
+/* ===== PLANETARY FIELD ===== */
+const c = document.getElementById("field");
+const x = c.getContext("2d");
+let W,H,P=[];
+function resize(){
+  W=c.width=innerWidth;
+  H=c.height=innerHeight;
+  P=Array.from({length:250},()=>({
+    x:Math.random()*W,
+    y:Math.random()*H,
+    z:Math.random()*W
   }));
 }
-resize();
-addEventListener("resize", resize);
-function draw() {
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0,0,W,H);
-  particles.forEach(p => {
-    p.z -= 0.1;
-    if (p.z <= 0) p.z = W;
-    const k = 128 / p.z;
-    const x = (p.x - W/2) * k + W/2;
-    const y = (p.y - H/2) * k + H/2;
-    if (x > 0 && x < W && y > 0 && y < H) {
-      const size = (1 - p.z / W) * 3;
-      ctx.fillStyle = p.color;
-      ctx.fillRect(x, y, size, size);
+resize();addEventListener("resize",resize);
+
+function draw(){
+  x.fillStyle="#000";x.fillRect(0,0,W,H);
+  P.forEach(p=>{
+    p.z-=0.15;if(p.z<1)p.z=W;
+    let k=120/p.z;
+    let px=(p.x-W/2)*k+W/2;
+    let py=(p.y-H/2)*k+H/2;
+    if(px>0&&py>0&&px<W&&py<H){
+      let s=(1-p.z/W)*3;
+      x.fillStyle="rgba(77,210,255,.6)";
+      x.fillRect(px,py,s,s);
     }
   });
   requestAnimationFrame(draw);
 }
 draw();
-/* ================= DATA FETCHING ================= */
-async function fetchEcoData() {
-  // Симуляція/реальні API фетчі (заміни на реальні endpoints)
-  // Air Quality (приклад з OpenAQ або EPA)
-  try {
-    const airRes = await fetch('https://api.waqi.info/feed/geo:50.45;30.52/?token=demo'); // Приклад для Києва, заміни token
-    const airData = await airRes.json();
-    document.getElementById('aqi-value').textContent = airData.data.aqi || 'N/A';
-    document.getElementById('pm25-value').textContent = airData.data.iaqi.pm25?.v || 'N/A';
-    if (airData.data.aqi > 100) document.getElementById('air-alert').style.display = 'block';
-  } catch(e) { console.log('Air API error'); }
 
-  // Carbon (приклад з CO2.Earth або NASA)
-  try {
-    const co2Res = await fetch('https://api.co2signal.org/v1/latest?countryCode=UA'); // Заміни на глобальний
-    const co2Data = await co2Res.json();
-    document.getElementById('co2-value').textContent = co2Data.data.carbonIntensity || 'N/A';
-    // Для methane - використовуй інший API, наприклад NOAA
-  } catch(e) { console.log('Carbon API error'); }
+/* ===== OSINT CORE ===== */
+function rand(min,max){return Math.random()*(max-min)+min}
 
-  // Water (приклад з EPA або NOAA)
-  try {
-    // const waterRes = await fetch('https://waterservices.usgs.gov/nwis/iv/?format=json&sites=example_site');
-    // Оброби дані
-    document.getElementById('wqi-value').textContent = '75'; // Симуляція
-    document.getElementById('ocean-temp').textContent = '15.2'; // Симуляція
-  } catch(e) { console.log('Water API error'); }
+function update(){
+  let air = rand(40,90);
+  let water = rand(30,80);
+  let fire = rand(20,95);
+  let bio = rand(25,70);
+  let land = rand(35,85);
 
-  // Biodiversity (eBird приклад)
-  try {
-    // const bioRes = await fetch('https://api.ebird.org/v2/data/obs/UA/recent');
-    // Оброби
-    document.getElementById('species-alerts').textContent = '12 alerts'; // Симуляція
-  } catch(e) { console.log('Bio API error'); }
+  document.getElementById("air").style.width=air+"%";
+  document.getElementById("water").style.width=water+"%";
+  document.getElementById("fire").style.width=fire+"%";
+  document.getElementById("bio").style.width=bio+"%";
+  document.getElementById("land").style.width=land+"%";
 
-  // Deforestation (NASA FIRMS)
-  try {
-    // const defRes = await fetch('https://firms.modaps.eosdis.nasa.gov/api/area/csv/...');
-    document.getElementById('deforest-loss').textContent = '500'; // Симуляція
-    document.getElementById('fire-alerts').textContent = '23'; // Симуляція
-  } catch(e) { console.log('Deforest API error'); }
+  let score=(air+water+fire+bio+land)/5;
+  const anomaly=document.getElementById("anomaly");
 
-  // Climate (IBM або NOAA)
-  try {
-    document.getElementById('temp-anomaly').textContent = '+1.2'; // Симуляція
-    document.getElementById('co2-trend').textContent = 'Rising'; // Симуляція
-  } catch(e) { console.log('Climate API error'); }
-
-  // Ініціалізація мапи з Leaflet для climate pulse
-  const map = L.map('map').setView([0, 0], 2);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
-  // Додай оверлеї, наприклад heatmaps з даними
+  if(score>75){
+    anomaly.textContent="ANOMALY FIELD: CRITICAL";
+  }else if(score>60){
+    anomaly.textContent="ANOMALY FIELD: ACTIVE";
+  }else{
+    anomaly.textContent="ANOMALY FIELD: STABLE";
+  }
 }
 
-// Запуск фетчу при завантаженні та кожні 5 хв
-fetchEcoData();
-setInterval(fetchEcoData, 300000);
+update();
+setInterval(update,60000);
 </script>
+
 </body>
 </html>
