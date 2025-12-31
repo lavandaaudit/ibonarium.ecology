@@ -3,47 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ibonarium Heatmap</title>
+<title>Ibonarium Real-Time</title>
 <style>
-body {
-  margin:0; font-family:"Courier New", monospace; background:#0a0a0a; color:#9fe7ff;
-  display:flex; flex-direction:column; align-items:center; padding:20px;
-}
+body { margin:0; font-family:"Courier New", monospace; background:#0a0a0a; color:#9fe7ff; display:flex; flex-direction:column; align-items:center; padding:20px; }
 h1 { text-align:center; margin-bottom:20px; }
-.heatmap { display:grid; grid-template-columns:repeat(4,200px); gap:15px; width:100%; max-width:900px; }
-.card {
-  padding:15px; border-radius:10px; text-align:center;
-  color:#000; font-weight:bold; font-size:14px; transition:0.5s;
-}
+.heatmap { display:grid; grid-template-columns:repeat(2, 400px); gap:15px; width:100%; max-width:900px; }
+.card { padding:15px; border-radius:10px; text-align:center; color:#000; font-weight:bold; font-size:14px; transition:0.5s; }
 .value { font-size:18px; margin-top:5px; }
 #systemStatus { margin-top:20px; font-size:20px; font-weight:bold; }
 </style>
 </head>
 <body>
-<h1>Ibonarium Heatmap - Екологічний Осінт</h1>
-<div class="heatmap" id="heatmap">
-  <!-- карти створяться через JS -->
-</div>
-<div id="systemStatus">Loading...</div>
+<h1>Ibonarium Real-Time - Екологія</h1>
+<div class="heatmap" id="heatmap"></div>
+<div id="systemStatus">Завантаження...</div>
 
 <script>
 const indicators = [
-  {id:'aqi', label:'AQI (PM2.5)', api:'https://api.openaq.org/v2/latest?parameter=pm25&limit=1000', value:0, thresholds:[50,100]},
+  {id:'pm25', label:'PM2.5', api:'https://api.openaq.org/v2/latest?parameter=pm25&limit=1000', value:0, thresholds:[35,55]},
   {id:'pm10', label:'PM10', api:'https://api.openaq.org/v2/latest?parameter=pm10&limit=1000', value:0, thresholds:[50,100]},
-  {id:'co2', label:'CO2 (ppm)', api:null, value:420, thresholds:[420,450]},
-  {id:'ch4', label:'CH4 (ppb)', api:null, value:1890, thresholds:[1800,2000]},
-  {id:'temp', label:'Темп. аномалія °C', api:null, value:1.2, thresholds:[1,2]},
-  {id:'fires', label:'Активні пожежі', api:null, value:0, thresholds:[10,30]},
-  {id:'floods', label:'Повені', api:null, value:0, thresholds:[5,15]},
-  {id:'quakes', label:'Землетруси >M4', api:'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.0_hour.geojson', value:0, thresholds:[2,5]},
-  {id:'volcanoes', label:'Вулкани', api:null, value:0, thresholds:[1,3]},
-  {id:'deforest', label:'Дефорестація (ha)', api:null, value:0, thresholds:[200,500]},
-  {id:'so2', label:'SO2 (µg/m³)', api:null, value:0, thresholds:[20,50]},
-  {id:'no2', label:'NO2 (µg/m³)', api:'https://api.openaq.org/v2/latest?parameter=no2&limit=1000', value:0, thresholds:[40,80]},
-  {id:'o3', label:'O3 (µg/m³)', api:'https://api.openaq.org/v2/latest?parameter=o3&limit=1000', value:0, thresholds:[60,120]},
-  {id:'pm25-global', label:'PM2.5 глобально', api:null, value:0, thresholds:[35,55]},
-  {id:'radiation', label:'Радіаційний фон', api:null, value:0, thresholds:[0.1,0.3]},
-  {id:'humidity', label:'Вологість глобально %', api:null, value:50, thresholds:[30,70]}
+  {id:'no2', label:'NO2', api:'https://api.openaq.org/v2/latest?parameter=no2&limit=1000', value:0, thresholds:[40,80]},
+  {id:'o3', label:'O3', api:'https://api.openaq.org/v2/latest?parameter=o3&limit=1000', value:0, thresholds:[60,120]},
+  {id:'quakes', label:'Землетруси >M4 (за годину)', api:'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.0_hour.geojson', value:0, thresholds:[2,5]},
+  {id:'volcanoes', label:'Активні вулкани', api:'https://volcano.si.edu/news/WeeklyVolcanoRSS.xml', value:0, thresholds:[1,3]},
+  {id:'fires', label:'Пожежі (NASA FIRMS)', api:'https://firms.modaps.eosdis.nasa.gov/active_fire/c6/csv/MODIS_C6_Global_24h.csv', value:0, thresholds:[10,30]}
 ];
 
 const heatmap = document.getElementById('heatmap');
@@ -70,36 +53,31 @@ function updateCard(indicator) {
 async function fetchData() {
   for(const ind of indicators){
     try{
-      if(ind.api){
+      if(ind.api.includes('openaq')){
         const res = await fetch(ind.api);
         const data = await res.json();
-        if(ind.id==='aqi'){
-          const values = data.results.map(r=>r.measurements[0]?.value||0);
-          ind.value = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
-        } else if(ind.id==='pm10'){
-          const values = data.results.map(r=>r.measurements[0]?.value||0);
-          ind.value = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
-        } else if(ind.id==='quakes'){
-          ind.value = data.features.length;
-        } else if(ind.id==='no2'){
-          const values = data.results.map(r=>r.measurements[0]?.value||0);
-          ind.value = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
-        } else if(ind.id==='o3'){
-          const values = data.results.map(r=>r.measurements[0]?.value||0);
-          ind.value = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
-        }
-      } else {
-        // симуляція для інших даних
-        ind.value = Math.round(ind.thresholds[0]*Math.random()*1.5 + ind.thresholds[0]);
+        const values = data.results.map(r=>r.measurements[0]?.value||0);
+        ind.value = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
+      } else if(ind.id==='quakes'){
+        const res = await fetch(ind.api);
+        const data = await res.json();
+        ind.value = data.features.length;
+      } else if(ind.id==='volcanoes'){
+        // XML feed не можна напряму парсити на GitHub Pages через CORS
+        ind.value = 'N/A';
+      } else if(ind.id==='fires'){
+        // CSV з NASA FIRMS — неможливо fetch без проксі, поки N/A
+        ind.value = 'N/A';
       }
       updateCard(ind);
-    }catch(e){ console.error('Помилка fetch',ind.id,e);}
+    }catch(e){ console.error('Помилка fetch',ind.id,e); ind.value='N/A'; updateCard(ind);}
   }
   updateSystemStatus();
 }
 
 function updateSystemStatus(){
-  const avg = indicators.reduce((a,b)=>a+b.value,0)/indicators.length;
+  let numericValues = indicators.filter(i=>typeof i.value==='number').map(i=>i.value);
+  const avg = numericValues.reduce((a,b)=>a+b,0)/numericValues.length;
   const status = document.getElementById('systemStatus');
   if(avg<50) status.textContent='Система стабільна ✅';
   else if(avg<100) status.textContent='Попередження ⚠️';
@@ -108,7 +86,7 @@ function updateSystemStatus(){
 
 createCards();
 fetchData();
-setInterval(fetchData,300000); // оновлення кожні 5 хв
+setInterval(fetchData,300000); // кожні 5 хв
 </script>
 </body>
 </html>
