@@ -3,78 +3,162 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Екологічна карта забруднення повітря</title>
-
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- Leaflet Heatmap -->
-<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-
+<title>Ibonarium Ecology Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-html, body, #map {
-    height: 100%;
+body {
     margin: 0;
-    font-family: sans-serif;
+    font-family: "Courier New", monospace;
+    background: #0a0a0a;
+    color: #9fe7ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
 }
-#panel {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 1000;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
+h1 { text-align:center; margin-bottom:20px; }
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+}
+.card {
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #4dd2ff;
+    border-radius: 10px;
     padding: 10px;
-    border-radius: 6px;
-    font-size: 14px;
+    text-align: center;
 }
+.card h2 { font-size: 16px; margin-bottom:10px; color:#4dd2ff; }
+.card .value { font-size: 20px; margin-bottom:10px; }
+canvas { background: transparent !important; }
 </style>
 </head>
 <body>
-<div id="map"></div>
-<div id="panel">
-<strong>Забруднення повітря (PM2.5)</strong><br>
-Оновлюється кожну хвилину
+
+<h1>Ibonarium Ecology Dashboard</h1>
+
+<div class="dashboard">
+
+    <div class="card">
+        <h2>AQI (PM2.5)</h2>
+        <div class="value" id="aqi">Loading...</div>
+        <canvas id="aqiChart" width="150" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>CO2 (ppm)</h2>
+        <div class="value" id="co2">Loading...</div>
+        <canvas id="co2Chart" width="150" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>Метан (ppb)</h2>
+        <div class="value" id="ch4">Loading...</div>
+        <canvas id="ch4Chart" width="150" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>Темп. аномалія (°C)</h2>
+        <div class="value" id="tempAnomaly">Loading...</div>
+        <canvas id="tempChart" width="150" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>Активні пожежі</h2>
+        <div class="value" id="fires">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h2>Повені</h2>
+        <div class="value" id="floods">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h2>Землетруси >M4</h2>
+        <div class="value" id="quakes">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h2>Вулкани</h2>
+        <div class="value" id="volcanoes">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h2>Дефорестація (ha)</h2>
+        <div class="value" id="deforest">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h2>Кислотні дощі SO2</h2>
+        <div class="value" id="so2">Loading...</div>
+    </div>
+
 </div>
 
 <script>
-// ==================== Карта ====================
-const map = L.map('map').setView([20, 0], 2);
+// ===================== ініціалізація графіків =====================
+const aqiCtx = document.getElementById('aqiChart').getContext('2d');
+const co2Ctx = document.getElementById('co2Chart').getContext('2d');
+const ch4Ctx = document.getElementById('ch4Chart').getContext('2d');
+const tempCtx = document.getElementById('tempChart').getContext('2d');
 
-// OpenStreetMap
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+const aqiChart = new Chart(aqiCtx, {type:'doughnut', data:{labels:['AQI',''],datasets:[{data:[0,100],backgroundColor:['#ff4d4d','#222']}],options:{rotation:-90, circumference:180, plugins:{legend:{display:false}}}});
+const co2Chart = new Chart(co2Ctx, {type:'doughnut', data:{labels:['CO2',''],datasets:[{data:[0,500],backgroundColor:['#4dd2ff','#222']}],options:{rotation:-90, circumference:180, plugins:{legend:{display:false}}}});
+const ch4Chart = new Chart(ch4Ctx, {type:'doughnut', data:{labels:['CH4',''],datasets:[{data:[0,2000],backgroundColor:['#ffaa00','#222']}],options:{rotation:-90, circumference:180, plugins:{legend:{display:false}}}});
+const tempChart = new Chart(tempCtx, {type:'doughnut', data:{labels:['ΔT',''],datasets:[{data:[0,5],backgroundColor:['#ffcc00','#222']}],options:{rotation:-90, circumference:180, plugins:{legend:{display:false}}}});
 
-// ==================== Heatmap ====================
-let heatLayer = L.heatLayer([], {radius: 25, blur: 15, maxZoom: 6}).addTo(map);
-
-// ==================== Дані OpenAQ ====================
-async function fetchAirData() {
+// ===================== фетч ріалтайм даних =====================
+async function fetchEcoData() {
     try {
-        const res = await fetch('https://api.openaq.org/v2/latest?parameter=pm25&limit=1000');
-        const data = await res.json();
+        // AQI + PM2.5 (OpenAQ)
+        const airRes = await fetch('https://api.openaq.org/v2/latest?parameter=pm25&limit=1000');
+        const airData = await airRes.json();
+        const pm25Values = airData.results.map(r => r.measurements[0]?.value || 0);
+        const aqiAvg = Math.round(pm25Values.reduce((a,b)=>a+b,0)/pm25Values.length);
+        document.getElementById('aqi').textContent = aqiAvg;
+        aqiChart.data.datasets[0].data[0] = aqiAvg;
+        aqiChart.data.datasets[0].data[1] = 150 - aqiAvg;
+        aqiChart.update();
 
-        const heatPoints = data.results
-            .filter(d => d.measurements && d.measurements.length > 0)
-            .map(d => {
-                const value = d.measurements[0].value;
-                const lat = d.coordinates.latitude;
-                const lon = d.coordinates.longitude;
-                // нормалізація значення PM2.5 для heatmap
-                return [lat, lon, value];
-            });
+        // CO2 (симуляція, можна замінити на API)
+        const co2 = 420 + Math.random()*2;
+        document.getElementById('co2').textContent = co2.toFixed(1);
+        co2Chart.data.datasets[0].data[0] = co2;
+        co2Chart.data.datasets[0].data[1] = 500-co2;
+        co2Chart.update();
 
-        heatLayer.setLatLngs(heatPoints);
-    } catch(e) {
-        console.error('Помилка завантаження даних OpenAQ', e);
-    }
+        // CH4 (симуляція)
+        const ch4 = 1890 + Math.random()*10;
+        document.getElementById('ch4').textContent = ch4.toFixed(0);
+        ch4Chart.data.datasets[0].data[0] = ch4;
+        ch4Chart.data.datasets[0].data[1] = 2000-ch4;
+        ch4Chart.update();
+
+        // Температурна аномалія (симуляція)
+        const deltaT = 1.2 + Math.random()*0.2;
+        document.getElementById('tempAnomaly').textContent = deltaT.toFixed(1);
+        tempChart.data.datasets[0].data[0] = deltaT;
+        tempChart.data.datasets[0].data[1] = 5 - deltaT;
+        tempChart.update();
+
+        // Пожежі, повені, землетруси, вулкани (симуляція, можна інтегрувати NASA FIRMS, USGS)
+        document.getElementById('fires').textContent = Math.floor(Math.random()*50);
+        document.getElementById('floods').textContent = Math.floor(Math.random()*10);
+        document.getElementById('quakes').textContent = Math.floor(Math.random()*5);
+        document.getElementById('volcanoes').textContent = Math.floor(Math.random()*3);
+        document.getElementById('deforest').textContent = Math.floor(Math.random()*1000);
+        document.getElementById('so2').textContent = (Math.random()*10).toFixed(1);
+
+    } catch(e){ console.error('Помилка при отриманні даних', e);}
 }
 
-// ==================== Ріалтайм оновлення ====================
-fetchAirData();
-setInterval(fetchAirData, 60000); // кожну хвилину
+// запуск при завантаженні + кожні 5 хв
+fetchEcoData();
+setInterval(fetchEcoData, 300000);
+
 </script>
 </body>
 </html>
