@@ -52,6 +52,7 @@ html, body, #cesiumContainer {
 <script>
 Cesium.Ion.defaultAccessToken = null;
 
+// =================== VIEWER ===================
 const viewer = new Cesium.Viewer("cesiumContainer", {
     baseLayerPicker: false,
     geocoder: false,
@@ -62,9 +63,16 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     fullscreenButton: false
 });
 
+// =================== BASE EARTH ===================
+viewer.imageryLayers.addImageryProvider(
+  new Cesium.TileMapServiceImageryProvider({
+    url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
+  })
+);
+
 viewer.scene.globe.enableLighting = true;
 
-// ---------- HEAT ANOMALIES (NASA GIBS) ----------
+// =================== HEAT ANOMALIES ===================
 const heatLayer = viewer.imageryLayers.addImageryProvider(
     new Cesium.WebMapTileServiceImageryProvider({
         url: "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi",
@@ -77,7 +85,7 @@ const heatLayer = viewer.imageryLayers.addImageryProvider(
 );
 heatLayer.show = false;
 
-// ---------- FLOODS (GDACS) ----------
+// =================== FLOODS ===================
 const floodsLayer = viewer.imageryLayers.addImageryProvider(
     new Cesium.WebMapServiceImageryProvider({
         url: "https://www.gdacs.org/gdacsapi/api/WMS",
@@ -87,7 +95,7 @@ const floodsLayer = viewer.imageryLayers.addImageryProvider(
 );
 floodsLayer.show = false;
 
-// ---------- CYCLONES ----------
+// =================== CYCLONES ===================
 const cycloneLayer = viewer.imageryLayers.addImageryProvider(
     new Cesium.WebMapServiceImageryProvider({
         url: "https://www.gdacs.org/gdacsapi/api/WMS",
@@ -97,7 +105,7 @@ const cycloneLayer = viewer.imageryLayers.addImageryProvider(
 );
 cycloneLayer.show = false;
 
-// ---------- AIR POLLUTION (CAMS aerosol) ----------
+// =================== AIR POLLUTION ===================
 const airLayer = viewer.imageryLayers.addImageryProvider(
     new Cesium.WebMapTileServiceImageryProvider({
         url: "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi",
@@ -110,7 +118,7 @@ const airLayer = viewer.imageryLayers.addImageryProvider(
 );
 airLayer.show = false;
 
-// ---------- EARTHQUAKES (USGS live) ----------
+// =================== EARTHQUAKES ===================
 let quakeSource;
 async function loadEarthquakes() {
     quakeSource = await Cesium.GeoJsonDataSource.load(
@@ -129,7 +137,7 @@ async function loadEarthquakes() {
 }
 loadEarthquakes();
 
-// ---------- VOLCANOES ----------
+// =================== VOLCANOES ===================
 let volcanoSource;
 async function loadVolcanoes() {
     volcanoSource = await Cesium.GeoJsonDataSource.load(
@@ -146,19 +154,17 @@ async function loadVolcanoes() {
 }
 loadVolcanoes();
 
-// ---------- UI ----------
+// =================== UI ===================
 document.getElementById("heat").onchange = e => heatLayer.show = e.target.checked;
 document.getElementById("floods").onchange = e => floodsLayer.show = e.target.checked;
 document.getElementById("cyclones").onchange = e => cycloneLayer.show = e.target.checked;
 document.getElementById("air").onchange = e => airLayer.show = e.target.checked;
-
 document.getElementById("quakes").onchange = e =>
     quakeSource && (quakeSource.show = e.target.checked);
-
 document.getElementById("volcanoes").onchange = e =>
     volcanoSource && (volcanoSource.show = e.target.checked);
 
-// стартовий вигляд
+// =================== CAMERA ===================
 viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(20, 40, 20000000)
 });
