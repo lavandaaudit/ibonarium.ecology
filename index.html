@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
 <meta charset="utf-8">
-<title>Planetary ECO-OSINT</title>
+<title>Planetary Air Pollution</title>
 
 <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
 <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet"/>
@@ -14,39 +14,24 @@ html, body, #cesiumContainer {
     margin: 0;
     background: black;
     overflow: hidden;
-    font-family: system-ui, sans-serif;
 }
-
 #panel {
     position: absolute;
     top: 10px;
     left: 10px;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.6);
     color: #eee;
-    padding: 12px;
-    border-radius: 8px;
+    padding: 10px;
+    border-radius: 6px;
     font-size: 14px;
-}
-
-#panel label {
-    display: block;
-    margin: 6px 0;
-    cursor: pointer;
 }
 </style>
 </head>
 
 <body>
 <div id="cesiumContainer"></div>
-
 <div id="panel">
-<strong>ECO-OSINT Layers</strong>
-<label><input type="checkbox" id="heat"> Аномалії тепла</label>
-<label><input type="checkbox" id="floods"> Повені</label>
-<label><input type="checkbox" id="cyclones"> Циклони / шторми</label>
-<label><input type="checkbox" id="quakes"> Землетруси</label>
-<label><input type="checkbox" id="volcanoes"> Вулкани</label>
-<label><input type="checkbox" id="air"> Забруднення повітря</label>
+<label><input type="checkbox" id="air"> Забруднення повітря (Aerosol)</label>
 </div>
 
 <script>
@@ -65,47 +50,13 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
 
 // =================== BASE EARTH ===================
 viewer.imageryLayers.addImageryProvider(
-  new Cesium.TileMapServiceImageryProvider({
-    url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
-  })
+    new Cesium.TileMapServiceImageryProvider({
+        url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
+    })
 );
-
 viewer.scene.globe.enableLighting = true;
 
-// =================== HEAT ANOMALIES ===================
-const heatLayer = viewer.imageryLayers.addImageryProvider(
-    new Cesium.WebMapTileServiceImageryProvider({
-        url: "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi",
-        layer: "MODIS_Terra_Land_Surface_Temp_Day",
-        style: "",
-        tileMatrixSetID: "2km",
-        format: "image/png",
-        maximumLevel: 6
-    })
-);
-heatLayer.show = false;
-
-// =================== FLOODS ===================
-const floodsLayer = viewer.imageryLayers.addImageryProvider(
-    new Cesium.WebMapServiceImageryProvider({
-        url: "https://www.gdacs.org/gdacsapi/api/WMS",
-        layers: "Floods",
-        parameters: { transparent: true, format: "image/png" }
-    })
-);
-floodsLayer.show = false;
-
-// =================== CYCLONES ===================
-const cycloneLayer = viewer.imageryLayers.addImageryProvider(
-    new Cesium.WebMapServiceImageryProvider({
-        url: "https://www.gdacs.org/gdacsapi/api/WMS",
-        layers: "Cyclones",
-        parameters: { transparent: true, format: "image/png" }
-    })
-);
-cycloneLayer.show = false;
-
-// =================== AIR POLLUTION ===================
+// =================== AIR POLLUTION LAYER ===================
 const airLayer = viewer.imageryLayers.addImageryProvider(
     new Cesium.WebMapTileServiceImageryProvider({
         url: "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi",
@@ -118,51 +69,8 @@ const airLayer = viewer.imageryLayers.addImageryProvider(
 );
 airLayer.show = false;
 
-// =================== EARTHQUAKES ===================
-let quakeSource;
-async function loadEarthquakes() {
-    quakeSource = await Cesium.GeoJsonDataSource.load(
-        "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
-        { clampToGround: false }
-    );
-    viewer.dataSources.add(quakeSource);
-
-    quakeSource.entities.values.forEach(e => {
-        const mag = e.properties.mag;
-        e.point = new Cesium.PointGraphics({
-            pixelSize: 4 + mag * 2,
-            color: Cesium.Color.VIOLET.withAlpha(0.7)
-        });
-    });
-}
-loadEarthquakes();
-
-// =================== VOLCANOES ===================
-let volcanoSource;
-async function loadVolcanoes() {
-    volcanoSource = await Cesium.GeoJsonDataSource.load(
-        "https://raw.githubusercontent.com/andrewcottam/volcanoes/master/volcanoes.geojson"
-    );
-    viewer.dataSources.add(volcanoSource);
-
-    volcanoSource.entities.values.forEach(v => {
-        v.billboard = {
-            image: "https://upload.wikimedia.org/wikipedia/commons/e/e7/Volcano_icon.svg",
-            scale: 0.05
-        };
-    });
-}
-loadVolcanoes();
-
 // =================== UI ===================
-document.getElementById("heat").onchange = e => heatLayer.show = e.target.checked;
-document.getElementById("floods").onchange = e => floodsLayer.show = e.target.checked;
-document.getElementById("cyclones").onchange = e => cycloneLayer.show = e.target.checked;
 document.getElementById("air").onchange = e => airLayer.show = e.target.checked;
-document.getElementById("quakes").onchange = e =>
-    quakeSource && (quakeSource.show = e.target.checked);
-document.getElementById("volcanoes").onchange = e =>
-    volcanoSource && (volcanoSource.show = e.target.checked);
 
 // =================== CAMERA ===================
 viewer.camera.flyTo({
